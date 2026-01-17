@@ -630,6 +630,513 @@ Vue chống **over-engineering**.
 
 
 
+---
+
+# 4. Vue Router – Lazy loading – Form
+
+
+
+## 1. ROUTING (Angular → Vue)
+
+### Keyword mapping
+
+```
+ANGULAR                         VUE
+────────────────────────────────────────
+@angular/router                vue-router
+Routes[]                        routes[]
+RouterModule.forRoot()          createRouter()
+<router-outlet>                <router-view>
+routerLink                     <router-link>
+CanActivate                    beforeEach / beforeEnter
+```
+
+### Diagram: Routing flow
+
+#### Angular
+
+```
+URL change
+   ↓
+Router
+   ↓
+CanActivate / Resolver
+   ↓
+Component
+```
+
+#### Vue
+
+```
+URL change
+   ↓
+vue-router
+   ↓
+beforeEach / beforeEnter
+   ↓
+Component
+```
+
+👉 Vue **không có Resolver riêng** – logic thường nằm trong `setup()` hoặc `beforeEnter`.
+
+
+### Mental shift
+
+```
+Angular: Route là cấu hình + vòng đời riêng
+Vue: Route là dữ liệu + hook
+```
+
+## 2. LAZY LOADING (điểm giống nhau nhất)
+
+### Keyword mapping
+
+```
+ANGULAR                         VUE
+────────────────────────────────────────
+loadChildren                   () => import()
+NgModule lazy                  Component lazy
+PreloadingStrategy             dynamic import
+```
+
+### Diagram: Lazy loading
+
+#### Angular
+
+```
+Navigate to /admin
+    ↓
+Load admin.module.ts
+    ↓
+Load components
+```
+
+#### Vue
+
+```
+Navigate to /admin
+    ↓
+import('Admin.vue')
+    ↓
+Render component
+```
+
+
+### Vue route lazy example (tư duy)
+
+```
+/admin
+  └─ import Admin.vue khi cần
+```
+
+👉 Vue lazy **nhẹ hơn** vì không có module layer.
+
+
+### Mental shift
+
+```
+Angular lazy-load module
+Vue lazy-load component
+```
+
+
+## 3. FORM (chỗ Angular dev hay… đau đầu nhất)
+
+### Keyword mapping tổng quát
+
+```
+ANGULAR                         VUE
+────────────────────────────────────────
+Template-driven form            v-model
+ReactiveForm                    reactive + ref
+FormControl                     ref
+FormGroup                       reactive object
+Validator                       custom function
+ControlValueAccessor            v-model
+```
+
+
+### 3.1 Template-driven Form → v-model
+
+#### Diagram
+
+```
+Input
+  ↓
+ngModel / v-model
+  ↓
+Component State
+```
+
+👉 Vue `v-model` = **2-way binding thuần**, không cần directive phức tạp.
+
+
+### 3.2 Reactive Form → reactive state
+
+#### Angular Reactive Form
+
+```
+FormGroup
+ ├─ FormControl
+ ├─ FormControl
+ └─ Validator
+```
+
+#### Vue tương đương
+
+```
+reactive({
+  field1,
+  field2,
+  errors
+})
+```
+
+#### Diagram
+
+```
+Input
+  ↓
+v-model
+  ↓
+reactive state
+  ↓
+validate()
+```
+
+### 3.3 Validation mapping
+
+```
+ANGULAR                         VUE
+────────────────────────────────────────
+Validators.required             custom fn
+Validators.pattern              regex check
+statusChanges                   watch()
+valueChanges                    watch()
+```
+
+#### Diagram validate
+
+```
+value change
+   ↓
+watch()
+   ↓
+set error state
+```
+
+👉 Vue **không ép chuẩn validation**, bạn chọn lib (VeeValidate, Yup) hoặc tự viết.
+
+
+## 4. Guard / Auth / Permission
+
+### Mapping
+
+```
+ANGULAR                         VUE
+────────────────────────────────────────
+CanActivate                    beforeEach
+CanDeactivate                  beforeRouteLeave
+Resolve                        fetch in setup()
+```
+
+#### Diagram auth
+
+```
+Route enter
+   ↓
+check auth
+   ↓
+allow / redirect
+```
+
+
+## 5. Tổng hợp “dịch não” Angular → Vue
+
+```
+Angular hỏi:
+- Module đâu?
+- Guard nào?
+- FormControl nào?
+
+Vue hỏi:
+- Component này load khi nào?
+- State này reactive chưa?
+- Có cần share không?
+```
+
+
+## 6. Master cheat-sheet (in ra dán tường)
+
+```
+ROUTER
+router-outlet        → router-view
+CanActivate          → beforeEach
+
+LAZY
+loadChildren         → () => import()
+
+FORM
+FormGroup            → reactive({})
+FormControl          → ref
+ReactiveForm         → reactive + watch
+Validator            → custom fn
+```
+
+
+# 5. Composable · Reactivity · Computed/Watch · Slot · Provide/Inject · Directive · SSR · Error Handling · Performance
+
+## 1. Composable (khái niệm SỐ 1 Angular dev hay thiếu)
+
+### Mapping
+
+```
+ANGULAR                    VUE
+────────────────────────────────────
+Service (logic)            composable
+Facade pattern             composable
+Helper + DI                composable
+```
+
+### Diagram
+
+```
+Component
+   │ useUser()
+   ▼
+Composable
+   │ state + logic
+   ▼
+API / utils
+```
+
+👉 Composable = **service nhưng không có DI container**
+👉 Đây là “linh hồn” của Vue 3
+
+
+## 2. Reactivity system (Vue không phải Angular lite)
+
+### Angular
+
+```
+Change Detection
+   ↓
+Zone.js
+   ↓
+Check whole tree
+```
+
+### Vue
+
+```
+Dependency tracking
+   ↓
+reactive / ref
+   ↓
+Update đúng chỗ
+```
+
+### Diagram
+
+```
+read state ─▶ tracked
+write state ─▶ re-render đúng component
+```
+
+👉 Vue **không dirty-check**
+👉 Đọc ở đâu, update ở đó
+
+
+
+## 3. Computed vs Watch (Angular dev hay dùng sai)
+
+### Mapping
+
+```
+ANGULAR                    VUE
+────────────────────────────────────
+Getter + memo              computed
+ngOnChanges                watch
+```
+
+### Diagram
+
+```
+state ─▶ computed ─▶ UI
+state ─▶ watch ─▶ side-effect
+```
+
+👉 Rule vàng:
+
+* `computed` → **tính toán**
+* `watch` → **phản ứng phụ** (API, log, sync)
+
+
+
+## 4. Slots (người anh em của Content Projection)
+
+### Mapping
+
+```
+ANGULAR                    VUE
+────────────────────────────────────
+<ng-content>               <slot>
+select                      named slot
+TemplateRef                scoped slot
+```
+
+### Diagram
+
+```
+Parent
+  └─ content
+       ↓
+     Slot
+```
+
+👉 Slot của Vue **mạnh hơn** content projection nếu dùng đúng.
+
+
+
+## 5. Provide / Inject (DI nhưng “thiền” hơn)
+
+### Mapping
+
+```
+ANGULAR                    VUE
+────────────────────────────────────
+Injector                    provide / inject
+Global service              app.provide()
+```
+
+### Diagram
+
+```
+Ancestor
+  provide
+    ↓
+Descendant
+  inject
+```
+
+👉 Dùng cho **theme, i18n, auth context**, không phải cho mọi service.
+
+
+
+## 6. Directives (đừng nghĩ Vue thiếu)
+
+### Mapping
+
+```
+ANGULAR                    VUE
+────────────────────────────────────
+@Directive                 v-directive
+HostListener               directive hooks
+```
+
+### Diagram
+
+```
+Element
+   ↓
+Directive
+   ↓
+DOM behavior
+```
+
+👉 Vue directive = **DOM-level logic**, không phải business logic.
+
+
+
+## 7. Render flow & Virtual DOM
+
+### Angular
+
+```
+Template
+  ↓
+Change Detection
+  ↓
+DOM update
+```
+
+### Vue
+
+```
+Template
+  ↓
+Virtual DOM
+  ↓
+Patch minimal changes
+```
+
+👉 Vue tối ưu bằng **dependency**, không phải vòng quét.
+
+
+
+## 8. SSR / Hydration (nếu làm web lớn)
+
+### Mapping
+
+```
+ANGULAR                    VUE
+────────────────────────────────────
+Angular Universal           Nuxt
+SSR module                  server renderer
+```
+
+### Diagram
+
+```
+Server render
+   ↓
+HTML
+   ↓
+Hydration
+   ↓
+Client app
+```
+
+
+
+## 9. Error handling
+
+### Mapping
+
+```
+ANGULAR                    VUE
+────────────────────────────────────
+ErrorHandler                errorCaptured
+try/catch RxJS              try/catch async
+```
+
+### Diagram
+
+```
+Child error
+   ↓
+errorCaptured
+   ↓
+fallback UI
+```
+
+
+
+## 10. Performance mindset (rất khác Angular)
+
+```
+ANGULAR tối ưu bằng:
+- OnPush
+- trackBy
+- manual unsubscribe
+
+VUE tối ưu bằng:
+- computed
+- shallowReactive
+- split component
+```
+
+👉 Vue performance = **thiết kế reactive đúng**, không phải tweak flag.
 
 
 
