@@ -1,3 +1,4 @@
+# 1. Vue diagram
 
 ## 1. Tổng quan kiến trúc Vue.js (High-level)
 
@@ -163,7 +164,7 @@ allow / redirect
 
 --- 
 
-# Angular - Vue
+# 2. Vue Lifecycle
 
 ## 1. Diagram tổng thể: Angular mindset → Vue mindset
 
@@ -390,17 +391,245 @@ Observable      → ref / watch
 Module          → app.use()
 ```
 
+# 3. Vue state management
 
 
-## Lời khuyên của một thằng “đã đi cả hai phe”
+## 1. Big picture: Angular State vs Vue State
 
-Đừng cố viết Vue theo kiểu Angular.
-Angular giỏi **enterprise discipline**.
-Vue giỏi **tốc độ, độ mềm, khả năng tiến hóa**.
+```
+ANGULAR (enterprise-style)          VUE (pragmatic-style)
+──────────────────────────          ─────────────────────
+Service singleton                   Store (Pinia)
+RxJS Observable                     reactive / ref
+NgRx (Redux pattern)                Pinia (lighter)
+Async pipe                          computed / watch
+Facade pattern                      composable
+```
 
-Hãy nghĩ Vue như:
+👉 Angular: **state = stream**
+👉 Vue: **state = dữ liệu sống**
 
-> “Angular nhưng bạn phải tự chịu trách nhiệm về sự tỉnh táo của mình.”
+
+## 2. Diagram tổng quát: State flow
+
+### Angular (Service / NgRx)
+
+```
+Component
+   │ dispatch / subscribe
+   ▼
+Store / Service
+   │ Observable stream
+   ▼
+Reducer / Effect
+   │ HTTP
+   ▼
+Backend API
+```
+
+### Vue (Pinia)
+
+```
+Component
+   │ useStore()
+   ▼
+Pinia Store
+   │ action()
+   ▼
+Backend API
+```
+
+👉 Vue cắt bớt 2–3 tầng nghi lễ. Ít họp hành, làm việc luôn.
+
+
+
+## 3. Angular Service ↔ Vue Store (mapping trực tiếp)
+
+### Angular Service (state đơn giản)
+
+```
+@Injectable({ providedIn: 'root' })
+export class UserService {
+  private user$ = new BehaviorSubject<User>(null);
+
+  setUser(u: User) {
+    this.user$.next(u);
+  }
+
+  getUser() {
+    return this.user$.asObservable();
+  }
+}
+```
+
+### Vue Pinia Store (tư duy tương đương)
+
+```
+state: user
+actions: setUser
+getters: user
+```
+
+### Diagram mapping
+
+```
+BehaviorSubject     → state (reactive)
+.next()             → action()
+.asObservable()     → store.user
+```
+
+👉 Vue không cần stream nếu không có async phức tạp.
+
+
+
+## 4. NgRx ↔ Pinia (so sánh thẳng mặt)
+
+### Angular NgRx
+
+```
+Component
+   │ dispatch(Action)
+   ▼
+Reducer
+   │ new State
+   ▼
+Store
+   │ select()
+   ▼
+Component
+```
+
+### Vue Pinia
+
+```
+Component
+   │ store.action()
+   ▼
+Store
+   │ reactive state
+   ▼
+Component (auto update)
+```
+
+👉 Pinia = **NgRx đã bỏ bớt lễ nghi**.
+
+
+
+## 5. Keyword mapping table (rất quan trọng)
+
+```
+ANGULAR (NgRx)          VUE (Pinia)
+────────────────────────────────────
+Action                 action (function)
+Reducer                implicit (inside action)
+Selector               getter / computed
+Effect                 async action
+StoreModule             app.use(pinia)
+```
+
+👉 Vue **không tách reducer** → logic đọc được bằng mắt người.
+
+
+
+## 6. State scope (điểm Angular dev hay nhầm)
+
+### Angular
+
+```
+Component state   → class property
+Shared state      → Service / Store
+Global state      → NgRx
+```
+
+### Vue
+
+```
+Component state   → ref / reactive
+Shared state      → composable
+Global state      → Pinia
+```
+
+### Diagram scope
+
+```
+Local ──▶ ref()
+Shared ─▶ useXxx()
+Global ─▶ useXxxStore()
+```
+
+👉 Vue cho bạn **nhiều tầng state nhẹ**, không ép tất cả vào global.
+
+
+
+## 7. RxJS → Vue reactivity (chuyển não)
+
+```
+ANGULAR                    VUE
+────────────────────────────────────────
+combineLatest               computed
+switchMap                   watch
+takeUntil(destroy$)         onBeforeUnmount
+Subject                     ref + emit
+```
+
+### Diagram reactive
+
+```
+state change
+   ↓
+reactive system
+   ↓
+component re-render
+```
+
+👉 Vue reactive = **push-based + auto dependency tracking**
+Không cần nhớ unsubscribe nếu dùng đúng API.
+
+
+## 8. Khi nào Angular-style, khi nào Vue-style?
+
+**Angular dev mới sang Vue hay mắc lỗi:**
+
+* Nhồi mọi thứ vào store như NgRx ❌
+* Dùng watch thay cho computed ❌
+* Tạo “service class” y hệt Angular ❌
+
+**Vue style đúng:**
+
+```
+UI logic        → component
+Business logic → composable
+Shared state   → Pinia
+```
+
+
+## 9. Cheat-sheet treo tường (state management)
+
+```
+Angular Service      → Vue composable
+NgRx Store           → Pinia Store
+Observable           → ref / computed
+Selector             → getter
+Effect               → async action
+```
+
+
+
+## Một câu chốt cho người từng chinh chiến Angular
+
+Angular hỏi:
+
+> “State này thuộc module nào?”
+
+Vue hỏi:
+
+> “State này có cần share không?”
+
+Vue không chống enterprise.
+Vue chống **over-engineering**.
+
+
+
 
 
 
