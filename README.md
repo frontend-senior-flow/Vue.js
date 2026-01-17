@@ -161,4 +161,247 @@ auth check
 allow / redirect
 ```
 
+--- 
+
+# Angular - Vue
+
+## 1. Diagram tổng thể: Angular mindset → Vue mindset
+
+```
+┌───────────────────────┐        ┌───────────────────────┐
+│       Angular         │        │          Vue          │
+│ (Framework nặng đô)   │        │ (Framework linh hoạt) │
+└──────────┬────────────┘        └──────────┬────────────┘
+           │                                   │
+           │ Component Class                  │ Component Setup
+           │ Decorators                       │ Composition API
+           │ DI Container                     │ Explicit Imports
+           │ RxJS everywhere                  │ reactivity (ref)
+           ▼                                   ▼
+   "Magic nhiều, rule chặt"          "Ít magic, code nói chuyện"
+```
+
+👉 Angular giống **quân đội chính quy**
+👉 Vue giống **đội đặc nhiệm gọn nhẹ**
+
+
+## 2. Lifecycle mapping (trọng tâm nhất)
+
+### Diagram lifecycle: Angular → Vue
+
+```
+ANGULAR                         VUE 3 (Composition API)
+────────────────────────────────────────────────────────
+constructor()        ───────▶   setup()
+
+ngOnInit()           ───────▶   onMounted()
+
+ngOnChanges()        ───────▶   watch(props)
+
+ngDoCheck()          ───────▶   watch / computed
+
+ngAfterViewInit()    ───────▶   onMounted()
+
+ngAfterViewChecked() ───────▶   watchEffect()
+
+ngOnDestroy()        ───────▶   onBeforeUnmount()
+                                   / onUnmounted()
+```
+
+👉 **Key insight**:
+Vue **không ép lifecycle**, nó cho bạn **react với dữ liệu**, không react với framework.
+
+
+## 3. Component structure mapping
+
+### Angular Component
+
+```
+@Component({
+  selector: 'app-user',
+  templateUrl: './user.component.html'
+})
+export class UserComponent {
+  @Input() user;
+  @Output() save = new EventEmitter();
+}
+```
+
+### Vue Component (tư duy tương đương)
+
+```
+<script setup>
+const props = defineProps(['user'])
+const emit = defineEmits(['save'])
+</script>
+```
+
+### Diagram
+
+```
+Angular Class-based          Vue Function-based
+──────────────────          ──────────────────
+@Component                  <script setup>
+@Input                       defineProps
+@Output                      defineEmits
+this.xxx                     ref / reactive
+```
+
+👉 Vue bỏ `this` → code **ít bug ngầm hơn**.
+
+
+
+## 4. Data binding: template sang template
+
+```
+ANGULAR                     VUE
+────────────────────────────────────────
+{{ value }}          ↔     {{ value }}
+
+[property]           ↔     :property
+
+(event)              ↔     @event
+
+[(ngModel)]          ↔     v-model
+```
+
+### Diagram binding
+
+```
+User Input
+    ↓
+v-model / ngModel
+    ↓
+Component State
+```
+
+👉 Vue `v-model` = **sugar syntax**, không có ControlValueAccessor đau đầu.
+
+
+
+## 5. Dependency Injection vs Explicit Import
+
+```
+ANGULAR                         VUE
+────────────────────────────────────────────────
+constructor(private svc: Svc)   import svc
+
+@NgModule providers              app.use(plugin)
+
+DI container toàn cục             DI "bằng tay"
+```
+
+### Diagram
+
+```
+Angular:              Vue:
+─────────             ─────────
+Injector              Explicit import
+   │                      │
+   ▼                      ▼
+Component            Component
+```
+
+👉 Vue chọn **rõ ràng hơn thông minh**.
+Trade-off: bạn phải tự tổ chức code.
+
+
+
+## 6. RxJS → Vue reactivity
+
+```
+ANGULAR                         VUE
+────────────────────────────────────────────────
+Observable                     ref / reactive
+
+async pipe                     computed
+
+subscribe()                    watch()
+
+Subject                        ref + emit
+```
+
+### Diagram reactive
+
+```
+Data change
+   ↓
+ref / reactive
+   ↓
+Auto re-render
+```
+
+👉 Vue reactive = **pull-based**, không cần stream cho mọi thứ.
+
+
+
+## 7. Routing
+
+```
+ANGULAR                         VUE
+────────────────────────────────────────────────
+@angular/router                vue-router
+
+<router-outlet>                <router-view>
+
+CanActivate                    beforeEach
+```
+
+Diagram:
+
+```
+URL
+ ↓
+Router
+ ↓
+Component
+```
+
+
+
+## 8. Mental model chuyển đổi (cái này là vàng)
+
+```
+Angular hỏi:
+- Lifecycle nào?
+- Inject gì?
+- Observable đâu?
+
+Vue hỏi:
+- Data thay đổi ở đâu?
+- Ai đang watch?
+- Component này sống bao lâu?
+```
+
+👉 Angular = **framework điều khiển bạn**
+👉 Vue = **bạn điều khiển framework**
+
+
+
+## 9. Cheat-sheet mini (copy dán treo tường)
+
+```
+ngOnInit        → onMounted
+ngOnDestroy     → onBeforeUnmount
+@Input          → props
+@Output         → emit
+Service         → composableേഴ
+Observable      → ref / watch
+Module          → app.use()
+```
+
+
+
+## Lời khuyên của một thằng “đã đi cả hai phe”
+
+Đừng cố viết Vue theo kiểu Angular.
+Angular giỏi **enterprise discipline**.
+Vue giỏi **tốc độ, độ mềm, khả năng tiến hóa**.
+
+Hãy nghĩ Vue như:
+
+> “Angular nhưng bạn phải tự chịu trách nhiệm về sự tỉnh táo của mình.”
+
+
+
 
